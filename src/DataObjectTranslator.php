@@ -2,32 +2,35 @@
 
 namespace BenkIT\DeepLTranslation;
 
-use DeepL\TranslateTextOptions;
-use SilverStripe\Core\Environment;
-use SilverStripe\ORM\DataList;
-use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
+use SilverStripe\ORM\DataList;
+use DeepL\TranslateTextOptions;
+use SilverStripe\ORM\DataObject;
+use SilverStripe\Core\Environment;
+use SilverStripe\Core\Config\Config;
 use SilverStripe\ORM\FieldType\DBField;
-use SilverStripe\Security\Permission;
 use TractorCow\Fluent\State\FluentState;
 
-class DataObjectTranslator implements \SilverStripe\Security\PermissionProvider {
+class DataObjectTranslator implements \SilverStripe\Security\PermissionProvider
+{
     use \SilverStripe\Core\Injector\Injectable;
 
     protected $object;
     protected $translation_texts;
     protected $translation_results;
 
-    public function __construct(DataObject $object = null) {
+    public function __construct(DataObject $object = null)
+    {
         $this->object = $object;
     }
 
-    public function translateObject($locale_from, $locale_to, $recursive = true) {
+    public function translateObject($locale_from, $locale_to, $recursive = true)
+    {
         if (!$this->object instanceof DataObject)
-                throw new \Exception('No DataObject set for ' . __CLASS__);
+            throw new \Exception('No DataObject set for ' . __CLASS__);
 
         // ToDo can this be a problem?
-        FluentState::singleton()->withState(function(FluentState $state) use ($locale_from, $locale_to, $recursive) {
+        FluentState::singleton()->withState(function (FluentState $state) use ($locale_from, $locale_to, $recursive) {
             $state->setLocale($locale_to);
 
             $this->translation_texts = [];
@@ -46,26 +49,34 @@ class DataObjectTranslator implements \SilverStripe\Security\PermissionProvider 
         });
     }
 
-    public function getTexts($recursive = true) {
+    public function getTexts($recursive = true)
+    {
         $this->translation_texts = [];
         $this->collectTexts($this->object, $recursive);
         return $this->translation_texts;
     }
 
-    protected function collectTexts(DataObject $object, $recursive) {
+    protected function collectTexts(DataObject $object, $recursive)
+    {
         if (!$this->object instanceof DataObject)
             throw new \Exception('No DataObject set for ' . __CLASS__);
 
-        $translate = $object->config()->get('deepl_translate');
+
+        $fields = $object->getLocalisedTables();
+        $translate = [];
+        foreach ($fields as $fieldArray) {
+            $translate = array_merge($translate, $fieldArray);
+        }
+        $global_ignore = Config::inst()->get('deepl_translate_ignore') ?: [];
         $ignore = $object->config()->get('deepl_translate_ignore') ?: [];
+        $actual_ignore = array_unique(array_merge($global_ignore, $ignore));
+
+        $translate = array_diff($translate, $actual_ignore);
 
         if (empty($translate))
             return;
 
         foreach ($translate as $part) {
-
-            if (in_array($part, $ignore))
-                continue;
 
             $fieldOrObject = $object->obj($part);
 
@@ -79,18 +90,17 @@ class DataObjectTranslator implements \SilverStripe\Security\PermissionProvider 
                     'field' => $part,
                     'value' => "<t id=\"$md5\">{$fieldOrObject->getValue()}</t>"
                 ];
-
             } else if ($recursive) {
                 if ($fieldOrObject instanceof DataObject && $fieldOrObject->isInDB()) {
                     $this->collectTexts($fieldOrObject, true);
-
                 } else {
                     try {
                         $list = $object->getComponents($part);
                         foreach ($list as $component) {
                             $this->collectTexts($component, true);
                         }
-                    } catch (\Exception $e) {}
+                    } catch (\Exception $e) {
+                    }
                 }
             }
         }
@@ -103,7 +113,8 @@ class DataObjectTranslator implements \SilverStripe\Security\PermissionProvider 
      * @return \DeepL\TextResult[]
      * @throws \DeepL\DeepLException
      */
-    protected function deeplTranslate($text, $locale_from, $locale_to) {
+    protected function deeplTranslate($text, $locale_from, $locale_to)
+    {
         if (!$authKey = Environment::getEnv('DEEPL_API_KEY'))
             throw new \Exception('env DEEPL_API_KEY not set');
 
@@ -113,10 +124,10 @@ class DataObjectTranslator implements \SilverStripe\Security\PermissionProvider 
         $locale_from = explode('_', $locale_from)[0];
 
         // some target languages need to be specific, see https://developers.deepl.com/docs/resources/supported-languages#target-languages
-        if  (in_array($locale_to, ['en_GB', 'en_US', 'pt_PT', 'pt_BR'])) {
+        if (in_array($locale_to, ['en_GB', 'en_US', 'pt_PT', 'pt_BR'])) {
             // DeepL uses en-US instead of en_US
             $locale_to = str_replace('_', '-', $locale_to);
-        } else if(in_array(explode('_', $locale_to)[0], ['en', 'pt'])) {
+        } else if (in_array(explode('_', $locale_to)[0], ['en', 'pt'])) {
             // ToDo non-standard en,pt languages need fallback
         } else {
             $locale_to = explode('_', $locale_to)[0];
@@ -144,7 +155,8 @@ class DataObjectTranslator implements \SilverStripe\Security\PermissionProvider 
      * @param $locale_to
      * @return void
      */
-    protected function writeTranslationResult() {
+    protected function writeTranslationResult()
+    {
         foreach ($this->translation_results as $class => $ids) {
             foreach ($ids as $objectID => $fields) {
                 DataObject::get_by_id($class, $objectID)
@@ -157,17 +169,18 @@ class DataObjectTranslator implements \SilverStripe\Security\PermissionProvider 
 
     public const PERMISSION_DEEPL_TRANSLATE = 'DEEPL_TRANSLATE';
 
-    public function providePermissions() {
+    public function providePermissions()
+    {
         return [
             self::PERMISSION_DEEPL_TRANSLATE => [
-//                'name' => _t(__CLASS__ . '.ACCESSALLINTERFACES', 'Access to all CMS sections'),
-//                'category' => _t(Permission::class . '.CMS_ACCESS_CATEGORY', 'CMS Access'),
-//                'help' => _t(__CLASS__ . '.ACCESSALLINTERFACESHELP', 'Overrules more specific access settings.'),
-//                'sort' => -100
+                //                'name' => _t(__CLASS__ . '.ACCESSALLINTERFACES', 'Access to all CMS sections'),
+                //                'category' => _t(Permission::class . '.CMS_ACCESS_CATEGORY', 'CMS Access'),
+                //                'help' => _t(__CLASS__ . '.ACCESSALLINTERFACESHELP', 'Overrules more specific access settings.'),
+                //                'sort' => -100
                 'name' => 'Translate content with DeepL',
                 'category' => _t(__CLASS__ . '.PERMISSION', 'Localisation')
-                ]
-            ];
+            ]
+        ];
     }
 
     /**
@@ -179,8 +192,9 @@ class DataObjectTranslator implements \SilverStripe\Security\PermissionProvider 
      * @return void
      * @throws \Exception
      */
-    public static function translateList(DataList $list, $locale_from, $locale_to) {
-        FluentState::singleton()->withState(function(FluentState $state) use ($list, $locale_from, $locale_to) {
+    public static function translateList(DataList $list, $locale_from, $locale_to)
+    {
+        FluentState::singleton()->withState(function (FluentState $state) use ($list, $locale_from, $locale_to) {
             $state->setLocale($locale_from);
             $class = $list->dataClass();
 
@@ -194,7 +208,7 @@ class DataObjectTranslator implements \SilverStripe\Security\PermissionProvider 
             }
         });
 
-        FluentState::singleton()->withState(function(FluentState $state) use ($list, $locale_from, $locale_to) {
+        FluentState::singleton()->withState(function (FluentState $state) use ($list, $locale_from, $locale_to) {
             $state->setLocale($locale_to);
             $class = $list->dataClass();
 
@@ -215,8 +229,9 @@ class DataObjectTranslator implements \SilverStripe\Security\PermissionProvider 
         });
     }
 
-    public static function countCharacters(DataList $list, $locale) {
-        FluentState::singleton()->withState(function(FluentState $state) use ($list, $locale) {
+    public static function countCharacters(DataList $list, $locale)
+    {
+        FluentState::singleton()->withState(function (FluentState $state) use ($list, $locale) {
             $state->setLocale($locale);
             $texts = [];
             $listCount = $charCount = 0;
@@ -233,7 +248,6 @@ class DataObjectTranslator implements \SilverStripe\Security\PermissionProvider 
                 foreach ($translator->getTexts() as $t) {
                     $texts[] = $t['value'];
                     $objCount += strlen($t['value']);
-
                 }
 
                 $title = ($obj->hasMethod('Breadcrumbs'))
@@ -251,7 +265,3 @@ class DataObjectTranslator implements \SilverStripe\Security\PermissionProvider 
         });
     }
 }
-
-
-
-

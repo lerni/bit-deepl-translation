@@ -1,15 +1,30 @@
 {
-    "name": "bit/deepl-translation",
-    "authors": [
-        {
-            "name": "Martin Benkenstein"
-        }
-    ],
-    "require": {
-        "silverstripe/framework": ">=4.0",
-        "silverstripe/cms": ">=4.0",
-        "tractorcow/silverstripe-fluent": "*",
-        "lekoala/silverstripe-cms-actions": "*",
-        "deeplcom/deepl-php": "*"
+	"name": "bit/deepl-translation",
+	"description": "A DeepL translation module for Silverstripe & Fluent",
+	"type": "silverstripe-vendormodule",
+	"license": "BSD-3-Clause",
+	"keywords": [
+		"silverstripe",
+		"fluent",
+		"DeepL",
+		"translate",
+		"API"
+	  ],
+	"authors": [
+		{
+			"name": "Martin Benkenstein"
+		}
+	],
+	"require": {
+		"silverstripe/framework": ">=4.0",
+		"silverstripe/cms": ">=4.0",
+		"tractorcow/silverstripe-fluent": "*",
+		"lekoala/silverstripe-cms-actions": "^1",
+		"deeplcom/deepl-php": "^1"
+	},
+	"autoload": {
+		"psr-4": {
+			"Bit\\DeeplTranslation\\": "src/"
+		}
 	}
 }

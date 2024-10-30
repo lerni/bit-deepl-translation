@@ -1,59 +1,10 @@
 ---
 Name: bit-deepl-translate
 ---
+deepl_translate_ignore:
+  - ShareTokenSalt
+  - ReportClass
 
 SilverStripe\Admin\LeftAndMain:
   extensions:
     - BenkIT\DeepLTranslation\DeepLLeftAndMainExtension
-
-
-SilverStripe\CMS\Model\SiteTree:
-  deepl_translate:
-    - URLSegment
-    - Title
-    - MenuTitle
-    - Content
-    - MetaDescription
-
-Page:
-  deepl_translate:
-    - ElementalArea
-
-DNADesign\Elemental\Models\ElementalArea:
-  deepl_translate:
-    - Elements
-
-DNADesign\Elemental\Models\BaseElement:
-  deepl_translate:
-    - Title
-
-BenkIT\Elemental\BaseElement_Part:
-  deepl_translate:
-    - Title
-
-BenkIT\Extensions\Linkable\LinkableExtension:
-  deepl_translate:
-    - LinkTitle
-
-
-SilverStripe\SiteConfig\SiteConfig:
-  deepl_translate:
-    - CookieConsentTitle
-    - CookieConsentContent
-    - CookieConsentButton_AcceptAll
-    - CookieConsentButton_AcceptNecessary
-    - CookieConsentButton_Manage
-    - CookieConsentButton_SaveForm
-    - CookieConsentButton_GoBack
-
-BenkIT\CookieConsent\Model\CookieGroup:
-  deepl_translate:
-    - Title
-    - Content
-    - EmbeddedContentText
-
-BenkIT\CookieConsent\Model\CookieDescription:
-  deepl_translate:
-    - Title
-    - Provider
-    - Purpose

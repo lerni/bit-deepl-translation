@@ -1,0 +1,9 @@
+## ignorance is bliss
+**/.DS_Store
+**/.AppleDouble
+**/.LSOverride
+**/*.map
+/*.log
+/.idea/
+/.vscode/*
+todo**
