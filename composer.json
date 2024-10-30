@@ -1,0 +1,15 @@
+{
+    "name": "bit/deepl-translation",
+    "authors": [
+        {
+            "name": "Martin Benkenstein"
+        }
+    ],
+    "require": {
+        "silverstripe/framework": ">=4.0",
+        "silverstripe/cms": ">=4.0",
+        "tractorcow/silverstripe-fluent": "*",
+        "lekoala/silverstripe-cms-actions": "*",
+        "deeplcom/deepl-php": "*"
+	}
+}
