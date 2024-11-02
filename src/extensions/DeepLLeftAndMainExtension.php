@@ -7,6 +7,7 @@ use TractorCow\Fluent\Model\Locale;
 use SilverStripe\Control\Controller;
 use SilverStripe\Versioned\Versioned;
 use SilverStripe\Admin\LeftAndMainExtension;
+use TractorCow\Fluent\Extension\FluentExtension;
 
 /**
  * @property \SilverStripe\Admin\LeftAndMain owner
@@ -35,8 +36,12 @@ class DeepLLeftAndMainExtension extends LeftAndMainExtension
             $id = $request->getVar('ID');
         }
 
+        $object = DataObject::get_by_id($class, $id);
+
+        if (!$object->hasExtension(FluentExtension::class))
+            throw new \Exception('FluentExtension mission on ' . __CLASS__);
+
         try {
-            $object = DataObject::get_by_id($class, $id);
             DataObjectTranslator::create($object)
                 ->translateObject($locale_from, $locale_to);
             $message = _t(__CLASS__ . '.Transalted', '{object} #{id} {title} translated from {from-locale} to {to-locale}', [

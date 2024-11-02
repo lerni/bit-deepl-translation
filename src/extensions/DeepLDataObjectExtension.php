@@ -11,6 +11,7 @@ use SilverStripe\Forms\DropdownField;
 use SilverStripe\Security\Permission;
 use SilverStripe\Versioned\Versioned;
 use LeKoala\CmsActions\CmsInlineFormAction;
+use TractorCow\Fluent\Extension\FluentExtension;
 use BenkIT\DeepLTranslation\DataObjectTranslator;
 
 class DeepLDataObjectExtension extends DataExtension
@@ -27,54 +28,62 @@ class DeepLDataObjectExtension extends DataExtension
 
         $tab = $this->getCMSTab();
 
-        if (! Permission::check(DataObjectTranslator::PERMISSION_DEEPL_TRANSLATE)) {
+        if (!Permission::check(DataObjectTranslator::PERMISSION_DEEPL_TRANSLATE)) {
             $fields->addFieldsToTab($tab, [
                 LiteralField::create('DeeplTargetLocaleHint', _t(__CLASS__ . '.MissingPermission', 'Missing permission to translate.')),
             ]);
-
-            return;
         }
 
         if (!Versioned::get_stage() == Versioned::DRAFT) {
             $fields->addFieldsToTab($tab, [
                 LiteralField::create('DeeplTargetLocaleHint', _t(__CLASS__ . '.OnlyDraft', 'Published data cannot be translated.')),
             ]);
-
-            return;
         }
 
+        if ($this->owner->hasExtension(FluentExtension::class))
+        {
 
-        if ($locale = Locale::getCurrentLocale()) {
+            if ($locale = Locale::getCurrentLocale()) {
+                $statusField = DropdownField::create('DeeplTranslationStatus', _t(__CLASS__ . '.STATUS', 'Status'), $this->owner->singleton()->dbObject('DeeplTranslationStatus')->enumValues());
+                $statusField->setEmptyString(_t(__CLASS__ . '.SelectEmptyString', 'Choose status'));
 
-            $statusField = DropdownField::create('DeeplTranslationStatus', _t(__CLASS__ . '.STATUS', 'Status'), $this->owner->singleton()->dbObject('DeeplTranslationStatus')->enumValues());
-            $statusField->setEmptyString(_t(__CLASS__ . '.SelectEmptyString', 'Choose status'));
+                $fields->addFieldsToTab($tab, [
+                    LiteralField::create('DeeplTargetLocaleHint', _t(__CLASS__ . '.TargetLanguage', 'Target language: {lang}', ['lang' => $locale->Title])),
+                    $statusField
+                ]);
+            }
 
-            $fields->addFieldsToTab($tab, [
-                LiteralField::create('DeeplTargetLocaleHint', _t(__CLASS__ . '.TargetLanguage', 'Target language: {lang}', ['lang' => $locale->Title])),
-                $statusField
-            ]);
+            // if ($this->owner->DeeplTranslationStatus != 'translated') {
+
+                $fields->addFieldsToTab($tab, [
+                    DropdownField::create('DeeplSourceLocale', _t(__CLASS__ . '.DEEPLSOURCELOCALE', 'Source locale'), Locale::get()->map('Locale', 'Title'))
+                        ->setDisabledItems([Locale::getCurrentLocale()->Locale])
+                        ->setEmptyString(_t(__CLASS__ . '.SelectLanguageCurrentLangEmptyString', 'Select source language')),
+
+                    $action = CmsInlineFormAction::create('deeplTranslateObject', _t(__CLASS__ . '.TranslateAction', 'Translate'))
+                        ->setParams(['ModelClass' => $this->owner->ClassName, 'ID' => $this->owner->ID])
+                        ->setButtonIcon('translatable')
+                        ->setPost(true)
+                ]);
+
+                $submitSelector = ($this->owner instanceof SiteTree)
+                    ? '#Form_EditForm_action_save'
+                    : '#Form_ItemEditForm_action_doSave';
+                $action->setSubmitSelector($submitSelector);
+            // } else {
+            //     $statusField->setDisabled(true);
+            // }
+        } else {
+            $fields->addFieldToTab($tab,
+                LiteralField::create(
+                    'FluentExtensionMissing',
+                    sprintf(
+                        '<p class="alert alert-warning">%s</p>',
+                        _t(__CLASS__ . '.FluentExtensionMissing', 'FluentExtension is required for DeepLTranslation')
+                    )
+                )
+            );
         }
-
-        // if ($this->owner->DeeplTranslationStatus != 'translated') {
-
-            $fields->addFieldsToTab($tab, [
-                DropdownField::create('DeeplSourceLocale', _t(__CLASS__ . '.DEEPLSOURCELOCALE', 'Source locale'), Locale::get()->map('Locale', 'Title'))
-                    ->setDisabledItems([Locale::getCurrentLocale()->Locale])
-                    ->setEmptyString(_t(__CLASS__ . '.SelectLanguageCurrentLangEmptyString', 'Select source language')),
-
-                $action = CmsInlineFormAction::create('deeplTranslateObject', _t(__CLASS__ . '.TranslateAction', 'Translate'))
-                    ->setParams(['ModelClass' => $this->owner->ClassName, 'ID' => $this->owner->ID])
-                    ->setButtonIcon('translatable')
-                    ->setPost(true)
-            ]);
-
-            $submitSelector = ($this->owner instanceof SiteTree)
-                ? '#Form_EditForm_action_save'
-                : '#Form_ItemEditForm_action_doSave';
-            $action->setSubmitSelector($submitSelector);
-        // } else {
-        //     $statusField->setDisabled(true);
-        // }
     }
 
     protected function getCMSTab()
