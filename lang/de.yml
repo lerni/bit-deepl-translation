@@ -1,16 +1,7 @@
 de:
   BenkIT\DeepLTranslation\DeepLDataObjectExtension:
-    DEEPLSOURCELOCALE: Quellsprache
-    DeeplTargetLocaleHint: 'Zielsprache: {lang}'
     MissingPermission: 'Keine Berechtigung zum Übersetzen.'
     OnlyDraft: 'Veröffentlichte Daten können nicht übersetzt werden.'
-    SelectLanguageCurrentLangEmptyString: 'Quellsprache auswählen'
-    SelectEmptyString: 'Status wählen'
-    STATUS: Status
-    TargetLanguage: 'Zielsprache: {lang}'
-    TranslateAction: 'Übersetzen'
+    TranslateAction: 'DeepL {from-locale} > {to-locale}'
   BenkIT\DeepLTranslation\DeepLLeftAndMainExtension:
-    COPY_NOT_DRAFT: 'Nur im Entwurfsmodus möglich'
-    MissingCurrentLang: 'Bitte "Aktuelle Sprache" wählen'
-    Transalted: '{object} #{id} {title} übersetzt von {from-locale} nach {to-locale}'
-
+    Transalted: '{object} #{id} {title} übersetzt von {from-locale} > {to-locale}'

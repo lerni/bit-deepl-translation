@@ -10,10 +10,12 @@ use SilverStripe\Core\Environment;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\ORM\FieldType\DBField;
 use TractorCow\Fluent\State\FluentState;
+use SilverStripe\Core\Injector\Injectable;
+use SilverStripe\Security\PermissionProvider;
 
-class DataObjectTranslator implements \SilverStripe\Security\PermissionProvider
+class DataObjectTranslator implements PermissionProvider
 {
-    use \SilverStripe\Core\Injector\Injectable;
+    use Injectable;
 
     protected $object;
     protected $translation_texts;
@@ -41,7 +43,9 @@ class DataObjectTranslator implements \SilverStripe\Security\PermissionProvider
 
             $texts = [];
             foreach ($this->translation_texts as $data) {
-                $texts[] = $data['value'];
+                if (!empty($data['value'])) {
+                    $texts[] = $data['value'];
+                }
             }
             $this->deeplTranslate($texts, $locale_from, $locale_to);
 

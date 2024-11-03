@@ -1,5 +1,7 @@
 # Silverstripe Fluent Deepl Translation - WIP
-This module, developed by Martin Benkenstein. It offers a straightforward method for translating DataObjects and SiteTree objects via the DeepL API into draft mode if versioned. I have customized it to better suit my requirements so that translated fields are automatically picked up and having just one single button to translate, otherwise just translate form default locale & relay on the language-selection in CMS.
+This module, developed by Martin Benkenstein offers a straightforward method to translate DataObjects and SiteTree objects via the DeepL API into draft mode if versioned is enabled.
+
+I have customized to my needs, it now just has one single button to only translate from default language into the per CMS-selected one and fields to translate are automatically picked up from Fluent config.
 
 ## License
 See [License](LICENSE)
@@ -26,6 +28,10 @@ Versions may be a bit vague since this is WIP
 - Fluent *
 
 ## Config
+Add your DeepL API key to your .env file
+```env
+DEEPL_API_KEY="your-api-key"
+``` 
 Add `BenkIT\DeepLTranslation\DeepLDataObjectExtension` to all DataObjects you want to translate. Fields can be ignored by adding to `deepl_translate_ignore` on a global and object level.
 
 ```yaml
@@ -35,13 +41,15 @@ Name: app-deepl-translate
 After:
   - '#bit-deepl-translate'
 ---
+# globally ignore fields
 deepl_translate_ignore:
   - CanonicalURL
 
-App\Models\ElementPage:
-# SilverStripe\CMS\Model\SiteTree:
+SilverStripe\CMS\Model\SiteTree:
   extensions:
-    - BenkIT\DeepLTranslation\DeepLDataObjectExtension
+    - 'BenkIT\DeepLTranslation\DeepLDataObjectExtension'
+
+App\Models\ElementPage:
   deepl_translate_ignore:
     - Content #this field gets generated
 

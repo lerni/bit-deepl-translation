@@ -4,7 +4,3 @@ Name: bit-deepl-translate
 deepl_translate_ignore:
   - ShareTokenSalt
   - ReportClass
-
-SilverStripe\Admin\LeftAndMain:
-  extensions:
-    - BenkIT\DeepLTranslation\DeepLLeftAndMainExtension

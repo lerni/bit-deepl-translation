@@ -5,105 +5,100 @@ namespace BenkIT\DeepLTranslation;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\ORM\DataExtension;
 use TractorCow\Fluent\Model\Locale;
-use SilverStripe\CMS\Model\SiteTree;
+use LeKoala\CmsActions\CustomAction;
 use SilverStripe\Forms\LiteralField;
-use SilverStripe\Forms\DropdownField;
 use SilverStripe\Security\Permission;
 use SilverStripe\Versioned\Versioned;
-use LeKoala\CmsActions\CmsInlineFormAction;
 use TractorCow\Fluent\Extension\FluentExtension;
 use BenkIT\DeepLTranslation\DataObjectTranslator;
 
 class DeepLDataObjectExtension extends DataExtension
 {
-    private static $db = [
-        'DeeplTranslationStatus' => "Enum('marked, excluded, translated', null)"
-    ];
-
-    private static $deepl_cms_tab = 'Root.Deepl';
-
     public function updateCMSFields(FieldList $fields)
     {
         parent::updateCMSFields($fields);
 
-        $tab = $this->getCMSTab();
-
-        if (!Permission::check(DataObjectTranslator::PERMISSION_DEEPL_TRANSLATE)) {
-            $fields->addFieldsToTab($tab, [
-                LiteralField::create('DeeplTargetLocaleHint', _t(__CLASS__ . '.MissingPermission', 'Missing permission to translate.')),
-            ]);
+        if (!$this->owner->hasExtension(FluentExtension::class))
+        {
+            $fields->unshift(LiteralField::create(
+                'FluentExtensionMissing',
+                sprintf(
+                    '<p class="alert alert-warning">%s</p>',
+                    _t(__CLASS__ . '.FluentExtensionMissing', 'FluentExtension is required for DeepLTranslation')
+                )
+            ));
         }
+    }
 
-        if (!Versioned::get_stage() == Versioned::DRAFT) {
-            $fields->addFieldsToTab($tab, [
-                LiteralField::create('DeeplTargetLocaleHint', _t(__CLASS__ . '.OnlyDraft', 'Published data cannot be translated.')),
-            ]);
-        }
-
-        if ($this->owner->hasExtension(FluentExtension::class))
+    public function updateCMSActions(FieldList $actions)
+    {
+        if ($traslatable = $this->isMachineTranslatable())
         {
 
-            if ($locale = Locale::getCurrentLocale()) {
-                $statusField = DropdownField::create('DeeplTranslationStatus', _t(__CLASS__ . '.STATUS', 'Status'), $this->owner->singleton()->dbObject('DeeplTranslationStatus')->enumValues());
-                $statusField->setEmptyString(_t(__CLASS__ . '.SelectEmptyString', 'Choose status'));
-
-                $fields->addFieldsToTab($tab, [
-                    LiteralField::create('DeeplTargetLocaleHint', _t(__CLASS__ . '.TargetLanguage', 'Target language: {lang}', ['lang' => $locale->Title])),
-                    $statusField
-                ]);
+            if (!count($traslatable))
+            {
+                return $actions;
             }
 
-            // if ($this->owner->DeeplTranslationStatus != 'translated') {
+            $buttonText = _t(__CLASS__ . '.TranslateAction', 'DeepL {from-locale} > {to-locale}', ['from-locale' => strtoupper(strtok($traslatable['from'], '_')), 'to-locale' => strtoupper(strtok($traslatable['to'], '_'))]);
 
-                $fields->addFieldsToTab($tab, [
-                    DropdownField::create('DeeplSourceLocale', _t(__CLASS__ . '.DEEPLSOURCELOCALE', 'Source locale'), Locale::get()->map('Locale', 'Title'))
-                        ->setDisabledItems([Locale::getCurrentLocale()->Locale])
-                        ->setEmptyString(_t(__CLASS__ . '.SelectLanguageCurrentLangEmptyString', 'Select source language')),
+            $actions->push($translateButton = new CustomAction("deeplTranslateObject", $buttonText));
+                // $translateButton->setButtonIcon('translatable');
+                $translateButton->setShouldRefresh(true);
 
-                    $action = CmsInlineFormAction::create('deeplTranslateObject', _t(__CLASS__ . '.TranslateAction', 'Translate'))
-                        ->setParams(['ModelClass' => $this->owner->ClassName, 'ID' => $this->owner->ID])
-                        ->setButtonIcon('translatable')
-                        ->setPost(true)
-                ]);
-
-                $submitSelector = ($this->owner instanceof SiteTree)
-                    ? '#Form_EditForm_action_save'
-                    : '#Form_ItemEditForm_action_doSave';
-                $action->setSubmitSelector($submitSelector);
-            // } else {
-            //     $statusField->setDisabled(true);
-            // }
-        } else {
-            $fields->addFieldToTab($tab,
-                LiteralField::create(
-                    'FluentExtensionMissing',
-                    sprintf(
-                        '<p class="alert alert-warning">%s</p>',
-                        _t(__CLASS__ . '.FluentExtensionMissing', 'FluentExtension is required for DeepLTranslation')
-                    )
-                )
-            );
+            return $actions;
         }
     }
 
-    protected function getCMSTab()
+    public function isMachineTranslatable(string $locale_from = null, string $locale_to = null): array
     {
-        return $this->owner->config()->get('deepl_cms_tab');
+        $arr = [];
+        if ($currentLocale = Locale::getCurrentLocale())
+        {
+            $locale_from = $locale_from ?? Locale::getDefault()->Locale;
+            $locale_to = $locale_to ?? $currentLocale->Locale;
+
+            if ($locale_to != $locale_from && $locale_to != Locale::getDefault()->Locale && $this->owner->existsInLocale($locale_to))
+            // !Permission::check(DataObjectTranslator::PERMISSION_DEEPL_TRANSLATE)
+            // if (!Versioned::get_stage() == Versioned::DRAFT) {
+            {
+                $arr['from'] = $locale_from;
+                $arr['to'] = $locale_to;
+            }
+        }
+        return $arr;
     }
 
-    // ToDo The part below tries to prevent the implicit "save' button click, which leads to 'has changed' Pages, when they haven't
-    // atm it seem to fail
-    //    public function updateCMSActions(\SilverStripe\Forms\FieldList $actions) {
-    //        parent::updateCMSActions($actions);
-    //
-    //        $actions->push(CustomAction::create("doCustomAction", "My custom action"));
-    //
-    //        return $actions;
-    //    }
-    //
-    //    public function doCustomAction() {
-    //        return true;
-    ////        return 'Done!';
-    ////        throw new Exception("Show this error");
-    //    }
+    public function deeplTranslateObject()
+    {
+        if (!$this->owner->hasExtension(FluentExtension::class))
+            throw new \Exception('FluentExtension mission on ' . __CLASS__);
+
+        $traslatable = $this->isMachineTranslatable();
+
+        if (count($traslatable))
+        {
+            try {
+                DataObjectTranslator::create($this->owner)
+                    ->translateObject($traslatable['from'], $traslatable['to']);
+                $message = _t(__CLASS__ . '.Transalted', '{object} #{id} {title} translated from {from-locale} to {to-locale}', [
+                    'object' => $this->owner->singular_name(),
+                    'id' => $this->owner->ID,
+                    'title' => $this->owner->Title,
+                    'from-locale' => $traslatable['from'],
+                    'to-locale' => $traslatable['to']
+                ]);
+                return $message;
+
+            } catch (\Exception $e) {
+                $message = _t(__CLASS__ . '.Transalted', '{object} #{id} {title} Übersetzung: {error}', [
+                    'object' => $this->owner->singular_name(),
+                    'id' => $this->owner->ID,
+                    'title' => $this->owner->Title,
+                    'error' => $e->getMessage()
+                ]);
+                return false;
+            }
+        }
+    }
 }
