@@ -1,10 +1,7 @@
 # Silverstripe Fluent Deepl Translation - WIP
 This module, developed by Martin Benkenstein offers a straightforward method to translate DataObjects and SiteTree objects via the DeepL API into draft mode if versioned is enabled.
 
-I have customized to my needs, it now just has one single button to only translate from default language into the per CMS-selected one and fields to translate are automatically picked up from Fluent config.
-
-## License
-See [License](LICENSE)
+I have customized to my needs; it now just has one single button to only translate from default language into the per CMS-selected one and fields to translate are automatically picked up from Fluent config.
 
 ## Installation
 ATM this module is not registered on packagist, so you have to add the repository to your composer.json
@@ -47,7 +44,7 @@ deepl_translate_ignore:
 
 SilverStripe\CMS\Model\SiteTree:
   extensions:
-    - 'BenkIT\DeepLTranslation\DeepLDataObjectExtension'
+    - 'BenkIT\DeepLTranslation\Extensions\DeepLDataObjectExtension'
 
 App\Models\ElementPage:
   deepl_translate_ignore:
@@ -55,22 +52,27 @@ App\Models\ElementPage:
 
 SilverStripe\UserForms\Model\EditableFormField:
   extensions:
-    - 'BenkIT\DeepLTranslation\DeepLDataObjectExtension'
+    - 'BenkIT\DeepLTranslation\Extensions\DeepLDataObjectExtension'
 
 SilverStripe\UserForms\Model\EditableFormField\EditableOption:
   extensions:
-    - 'BenkIT\DeepLTranslation\DeepLDataObjectExtension'
+    - 'BenkIT\DeepLTranslation\Extensions\DeepLDataObjectExtension'
 
 SilverStripe\SiteConfig\SiteConfig:
   extensions:
-    - 'BenkIT\DeepLTranslation\DeepLDataObjectExtension'
+    - 'BenkIT\DeepLTranslation\Extensions\DeepLDataObjectExtension'
 
 DNADesign\Elemental\Models\BaseElement:
   extensions:
-    - 'BenkIT\DeepLTranslation\DeepLDataObjectExtension'
+    - 'BenkIT\DeepLTranslation\Extensions\DeepLDataObjectExtension'
 
 App\Models\Teaser:
   extensions:
-    - 'BenkIT\DeepLTranslation\DeepLDataObjectExtension'
+    - 'BenkIT\DeepLTranslation\Extensions\DeepLDataObjectExtension'
 ...
 ```
+## Task
+There is `BenkIT\DeepLTranslation\Tasks\CopyTranslationTask` to translate all objects to a given language but be care full, is not tested well and may not work as expected. Parameter `confirmLocalize` & `confirmTranslate` need to be set to `true` to actually do something.
+
+## License
+See [License](LICENSE)

@@ -1,5 +1,5 @@
 de:
-  BenkIT\DeepLTranslation\DeepLDataObjectExtension:
+  BenkIT\DeepLTranslation\Extensions\DeepLDataObjectExtension:
     MissingPermission: 'Keine Berechtigung zum Übersetzen.'
     OnlyDraft: 'Veröffentlichte Daten können nicht übersetzt werden.'
     TranslateAction: 'DeepL {from-locale} > {to-locale}'
