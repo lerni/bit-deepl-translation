@@ -1,7 +1,7 @@
-# Silverstripe Fluent Deepl Translation - WIP
-This module, developed by Martin Benkenstein offers a straightforward method to translate DataObjects and SiteTree objects via the DeepL API into draft mode if versioned is enabled.
+# Silverstripe Fluent DeepL Translation - WIP
+This module, developed by Martin Benkenstein, offers a straightforward method to translate DataObjects and SiteTree objects via the DeepL API into draft mode if versioned is enabled.
 
-I have customized to my needs; it now just has one single button to only translate from default language into the per CMS-selected one and fields to translate are automatically picked up from Fluent config.
+I have customized it to my needs; it now just has one single button to only translate from default language into the CMS-selected one and fields to translate are automatically picked up from Fluent config.
 
 ## Installation
 ATM this module is not registered on packagist, so you have to add the repository to your composer.json
@@ -72,7 +72,7 @@ App\Models\Teaser:
 ...
 ```
 ## Task
-There is `BenkIT\DeepLTranslation\Tasks\CopyTranslationTask` to translate all objects to a given language but be care full, is not tested well and may not work as expected. Parameter `confirmLocalize` & `confirmTranslate` need to be set to `true` to actually do something.
+There is `BenkIT\DeepLTranslation\Tasks\CopyTranslationTask` to localize & translate all objects to a given language but be careful, it's not tested well and may not work as expected. Parameters `confirmLocalize` & `confirmTranslate` need to be set to `true` to actually do something.
 
 ## License
 See [License](LICENSE)
