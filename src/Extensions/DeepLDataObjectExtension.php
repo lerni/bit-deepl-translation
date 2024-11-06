@@ -82,7 +82,7 @@ class DeepLDataObjectExtension extends DataExtension
             try {
                 DataObjectTranslator::create($this->owner)
                     ->translateObject($traslatable['from'], $traslatable['to']);
-                $message = _t(__CLASS__ . '.Transalted', '{object} #{id} {title} translated from {from-locale} to {to-locale}', [
+                $message = _t(__CLASS__ . '.Translated', '{object} #{id} {title} translated from {from-locale} to {to-locale}', [
                     'object' => $this->owner->singular_name(),
                     'id' => $this->owner->ID,
                     'title' => $this->owner->Title,
@@ -92,7 +92,7 @@ class DeepLDataObjectExtension extends DataExtension
                 return $message;
 
             } catch (\Exception $e) {
-                $message = _t(__CLASS__ . '.Transalted', '{object} #{id} {title} Übersetzung: {error}', [
+                $message = _t(__CLASS__ . '.Translated', '{object} #{id} {title} Übersetzung: {error}', [
                     'object' => $this->owner->singular_name(),
                     'id' => $this->owner->ID,
                     'title' => $this->owner->Title,

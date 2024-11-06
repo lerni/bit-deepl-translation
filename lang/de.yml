@@ -4,4 +4,4 @@ de:
     OnlyDraft: 'Veröffentlichte Daten können nicht übersetzt werden.'
     TranslateAction: 'DeepL {from-locale} > {to-locale}'
   BenkIT\DeepLTranslation\DeepLLeftAndMainExtension:
-    Transalted: '{object} #{id} {title} übersetzt von {from-locale} > {to-locale}'
+    Translated: '{object} #{id} {title} übersetzt von {from-locale} > {to-locale}'
