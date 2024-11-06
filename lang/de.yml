@@ -3,5 +3,4 @@ de:
     MissingPermission: 'Keine Berechtigung zum Übersetzen.'
     OnlyDraft: 'Veröffentlichte Daten können nicht übersetzt werden.'
     TranslateAction: 'DeepL {from-locale} > {to-locale}'
-  BenkIT\DeepLTranslation\DeepLLeftAndMainExtension:
-    Translated: '{object} #{id} {title} übersetzt von {from-locale} > {to-locale}'
+    TranslateConfirmation: 'Inhalte von {from-locale} nach {to-locale} übersetzen und überschreiben?'

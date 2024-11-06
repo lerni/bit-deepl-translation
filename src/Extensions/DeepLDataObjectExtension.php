@@ -43,6 +43,7 @@ class DeepLDataObjectExtension extends DataExtension
 
             $actions->push($translateButton = new CustomAction("deeplTranslateObject", $buttonText));
                 // $translateButton->setButtonIcon('translatable');
+                $translateButton->setConfirmation(_t(__CLASS__ . '.TranslateConfirmation', 'Translate and overwrite content from {from-locale} to {to-locale}', ['from-locale' => $traslatable['from'], 'to-locale' => $traslatable['to']]));
                 $translateButton->setShouldRefresh(true);
 
             return $actions;
@@ -81,7 +82,7 @@ class DeepLDataObjectExtension extends DataExtension
         {
             try {
                 DataObjectTranslator::create($this->owner)
-                    ->translateObject($traslatable['from'], $traslatable['to']);
+                    ->translateObject($traslatable['from'], $traslatable['to'], false);
                 $message = _t(__CLASS__ . '.Translated', '{object} #{id} {title} translated from {from-locale} to {to-locale}', [
                     'object' => $this->owner->singular_name(),
                     'id' => $this->owner->ID,

@@ -7,6 +7,7 @@ use SilverStripe\ORM\DataList;
 use DeepL\TranslateTextOptions;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Core\Environment;
+use TractorCow\Fluent\Model\Locale;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\ORM\FieldType\DBField;
 use TractorCow\Fluent\State\FluentState;
@@ -60,11 +61,14 @@ class DataObjectTranslator implements PermissionProvider
         return $this->translation_texts;
     }
 
-    protected function collectTexts(DataObject $object, $recursive)
+    protected function collectTexts(DataObject $object, $recursive = false, $lang = null)
     {
         if (!$this->object instanceof DataObject)
             throw new \Exception('No DataObject set for ' . __CLASS__);
 
+        if (!$lang) {
+            $lang = Locale::getDefault()->Locale;
+        }
 
         $fields = $object->getLocalisedTables();
         $translate = [];
@@ -80,34 +84,36 @@ class DataObjectTranslator implements PermissionProvider
         if (empty($translate))
             return;
 
-        foreach ($translate as $part) {
+        $record = FluentState::singleton()->withState(function(FluentState $state) use ($object, $lang, $translate, $recursive) {
+            $state->setLocale($lang);
+            $record = $object->ClassName::get()->byID($object->ID);
+            foreach ($translate as $part) {
+                $fieldOrObject = $record->obj($part);
+                if ($fieldOrObject instanceof DBField && $fieldOrObject->getValue()) {
+                    // $this->text_collection[$object->ClassName][$object->ID][$part] = $fieldOrObject->getValue(); // might be useful in the future?
 
-            $fieldOrObject = $object->obj($part);
-
-            if ($fieldOrObject instanceof DBField && $fieldOrObject->getValue()) {
-                // $this->text_collection[$object->ClassName][$object->ID][$part] = $fieldOrObject->getValue(); // might be useful in the future?
-
-                $md5 = md5("$object->ClassName--$object->ID--$part");
-                $this->translation_texts[$md5] = [
-                    'class' => $object->ClassName,
-                    'id' => $object->ID,
-                    'field' => $part,
-                    'value' => "<t id=\"$md5\">{$fieldOrObject->getValue()}</t>"
-                ];
-            } else if ($recursive) {
-                if ($fieldOrObject instanceof DataObject && $fieldOrObject->isInDB()) {
-                    $this->collectTexts($fieldOrObject, true);
-                } else {
-                    try {
-                        $list = $object->getComponents($part);
-                        foreach ($list as $component) {
-                            $this->collectTexts($component, true);
+                    $md5 = md5("$record->ClassName--$record->ID--$part");
+                    $this->translation_texts[$md5] = [
+                        'class' => $record->ClassName,
+                        'id' => $record->ID,
+                        'field' => $part,
+                        'value' => "<t id=\"$md5\">{$fieldOrObject->getValue()}</t>"
+                    ];
+                } else if ($recursive) {
+                    if ($fieldOrObject instanceof DataObject && $fieldOrObject->isInDB()) {
+                        $this->collectTexts($fieldOrObject, true);
+                    } else {
+                        try {
+                            $list = $object->getComponents($part);
+                            foreach ($list as $component) {
+                                $this->collectTexts($component, true);
+                            }
+                        } catch (\Exception $e) {
                         }
-                    } catch (\Exception $e) {
                     }
                 }
             }
-        }
+        });
     }
 
     /**
