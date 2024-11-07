@@ -55,12 +55,17 @@ class DeepLDataObjectExtension extends DataExtension
         $arr = [];
         if ($currentLocale = Locale::getCurrentLocale())
         {
-            $locale_from = $locale_from ?? Locale::getDefault()->Locale;
+            $locale_from = $locale_from ?? Locale::getDefault();
+            // ToDo: why is this ever needed?
+            // on CLI we see a string, in CMS we see an object
+            if (is_object($locale_from)) {
+                $locale_from = $locale_from->Locale;
+            }
             $locale_to = $locale_to ?? $currentLocale->Locale;
 
             if (
                 $locale_to != $locale_from &&
-                $locale_to != Locale::getDefault()->Locale &&
+                $locale_to != Locale::getDefault() &&
                 $this->owner->existsInLocale($locale_to) &&
                 Permission::check(DataObjectTranslator::PERMISSION_DEEPL_TRANSLATE)
             ) {

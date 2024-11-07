@@ -36,11 +36,6 @@ class CopyTranslationTask extends BuildTask
         DB::alteration_message("Locale can be set a parameter (?l=en_US): $locale_to");
         DB::alteration_message("To actually write/translate set parameter 'confirmLocalize' or 'confirmTranslate' to true");
 
-        if ($locale_from == $locale_to) {
-            DB::alteration_message("local_from needs to differ to locale_to", "error");
-            return;
-        }
-
         $fluentExtensionOn = ClassInfo::classesWithExtension(FluentExtension::class, DataObject::class);
         if (!empty($fluentExtensionOn) && $confirmLocalize) {
             foreach ($fluentExtensionOn as $class => $value) {
@@ -58,6 +53,10 @@ class CopyTranslationTask extends BuildTask
 
         $deeplExtensionOn = ClassInfo::classesWithExtension(DeepLDataObjectExtension::class, DataObject::class);
         if (!empty($deeplExtensionOn)) {
+            if ($locale_from == $locale_to) {
+                DB::alteration_message("to translate, local_from needs to differ to locale_to", "error");
+                return;
+            }
             foreach ($deeplExtensionOn as $class => $value) {
                 $value::get()->each(function ($do) use ($locale_from, $locale_to, $confirmTranslate) {
                     if ($do->existsInLocale($locale_to)) {
