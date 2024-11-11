@@ -3,6 +3,9 @@ This module, developed by Martin Benkenstein, offers a straightforward method to
 
 I have customized it to my needs; it now just has one single button to only translate from default language into the CMS-selected one and fields to translate are automatically picked up from Fluent config.
 
+## Demo
+[![Video](doc/DeepLTranslate.gif)](doc/DeepLTranslate.gif)
+
 ## Installation
 ATM this module is not registered on packagist, so you have to add the repository to your composer.json
 ```json
