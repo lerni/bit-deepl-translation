@@ -27,7 +27,7 @@ class DataObjectTranslator implements PermissionProvider
         $this->object = $object;
     }
 
-    public function translateObject($locale_from, $locale_to, $recursive = true)
+    public function translateObject($locale_from, $locale_to, $recursive = false)
     {
         if (!$this->object instanceof DataObject)
             throw new \Exception('No DataObject set for ' . __CLASS__);
@@ -54,7 +54,7 @@ class DataObjectTranslator implements PermissionProvider
         });
     }
 
-    public function getTexts($recursive = true)
+    public function getTexts($recursive = false)
     {
         $this->translation_texts = [];
         $this->collectTexts($this->object, $recursive);
@@ -171,7 +171,6 @@ class DataObjectTranslator implements PermissionProvider
             foreach ($ids as $objectID => $fields) {
                 DataObject::get_by_id($class, $objectID)
                     ->update($fields)
-                    ->update(['DeeplTranslationStatus' => 'translated'])
                     ->write();
             }
         }
@@ -225,11 +224,6 @@ class DataObjectTranslator implements PermissionProvider
             foreach ($list as $obj) {
                 if (!$obj->existsInLocale($locale_to)) {
                     DB::alteration_message("WARNING: $class #$obj->ID '$obj->Title' does not exist in $locale_to");
-                    continue;
-                }
-
-                if ($obj->DeeplTranslationStatus == 'translated') {
-                    DB::alteration_message("$class #$obj->ID '$obj->Title' already marked as translated");
                     continue;
                 }
 
