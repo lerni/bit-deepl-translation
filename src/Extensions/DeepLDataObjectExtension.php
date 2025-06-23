@@ -3,6 +3,7 @@
 namespace BenkIT\DeepLTranslation\Extensions;
 
 use SilverStripe\Forms\FieldList;
+use SilverStripe\Control\Director;
 use SilverStripe\ORM\DataExtension;
 use TractorCow\Fluent\Model\Locale;
 use LeKoala\CmsActions\CustomAction;
@@ -67,7 +68,7 @@ class DeepLDataObjectExtension extends DataExtension
                 $locale_to != $locale_from &&
                 $locale_to != Locale::getDefault() &&
                 $this->owner->existsInLocale($locale_to) &&
-                Permission::check(DataObjectTranslator::PERMISSION_DEEPL_TRANSLATE)
+                (Director::is_cli() || Permission::check(DataObjectTranslator::PERMISSION_DEEPL_TRANSLATE))
             ) {
                 $arr['from'] = $locale_from;
                 $arr['to'] = $locale_to;
