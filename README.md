@@ -75,7 +75,8 @@ App\Models\Teaser:
 ...
 ```
 ## Task
-There is `BenkIT\DeepLTranslation\Tasks\CopyTranslationTask` to localize & translate all objects to a given language but be careful, it's not tested well and may not work as expected. Parameters `confirmLocalize` & `confirmTranslate` need to be set to `true` to actually do something.
+There is `BenkIT\DeepLTranslation\Tasks\CopyTranslationTask` to localize & translate all objects to a given language but be careful, it's not tested well and may not work as expected. Parameters `confirmLocalize` & `confirmTranslate` need to be set to `true` to actually do something and target locales must first be added via `/admin/locales`.
+
 
 ## License
 See [License](LICENSE)
