@@ -29,8 +29,9 @@ class DataObjectTranslator implements PermissionProvider
 
     public function translateObject($locale_from, $locale_to, $recursive = false)
     {
-        if (!$this->object instanceof DataObject)
+        if (!$this->object instanceof DataObject) {
             throw new \Exception('No DataObject set for ' . __CLASS__);
+        }
 
         // ToDo can this be a problem?
         FluentState::singleton()->withState(function (FluentState $state) use ($locale_from, $locale_to, $recursive) {
@@ -39,16 +40,11 @@ class DataObjectTranslator implements PermissionProvider
             $this->translation_texts = [];
             $this->collectTexts($this->object, $recursive);
 
-            if (empty($this->translation_texts))
+            if (empty($this->translation_texts)) {
                 throw new \Exception('No translation fields configured for ' . get_class($this->object));
-
-            $texts = [];
-            foreach ($this->translation_texts as $data) {
-                if (!empty($data['value'])) {
-                    $texts[] = $data['value'];
-                }
             }
-            $this->deeplTranslate($texts, $locale_from, $locale_to);
+
+            $this->deeplTranslate($locale_from, $locale_to);
 
             $this->writeTranslationResult();
         });
@@ -58,13 +54,15 @@ class DataObjectTranslator implements PermissionProvider
     {
         $this->translation_texts = [];
         $this->collectTexts($this->object, $recursive);
+
         return $this->translation_texts;
     }
 
     protected function collectTexts(DataObject $object, $recursive = false, $lang = null)
     {
-        if (!$this->object instanceof DataObject)
+        if (!$this->object instanceof DataObject) {
             throw new \Exception('No DataObject set for ' . __CLASS__);
+        }
 
         if (!$lang) {
             $lang = Locale::getDefault()->Locale;
@@ -81,10 +79,11 @@ class DataObjectTranslator implements PermissionProvider
 
         $translate = array_diff($translate, $actual_ignore);
 
-        if (empty($translate))
+        if (empty($translate)) {
             return;
+        }
 
-        $record = FluentState::singleton()->withState(function(FluentState $state) use ($object, $lang, $translate, $recursive) {
+        $record = FluentState::singleton()->withState(function (FluentState $state) use ($object, $lang, $translate, $recursive) {
             $state->setLocale($lang);
             $record = $object->ClassName::get()->byID($object->ID);
             foreach ($translate as $part) {
@@ -93,13 +92,23 @@ class DataObjectTranslator implements PermissionProvider
                     // $this->text_collection[$object->ClassName][$object->ID][$part] = $fieldOrObject->getValue(); // might be useful in the future?
 
                     $md5 = md5("$record->ClassName--$record->ID--$part");
+                    $rawValue = $fieldOrObject->getValue();
+                    // HTML fields already have entities encoded; plain text fields need escaping for valid XML
+                    $isHtmlField = $fieldOrObject instanceof \SilverStripe\ORM\FieldType\DBHTMLText
+                        || $fieldOrObject instanceof \SilverStripe\ORM\FieldType\DBHTMLVarchar;
+                    // HTML fields are sent directly with html tag handling (supports <br>, &nbsp;, etc.)
+                    // Plain text fields are wrapped in <t> tags for xml tag handling
+                    $value = $isHtmlField
+                        ? $rawValue
+                        : '<t id="' . $md5 . '">' . htmlspecialchars($rawValue, ENT_XML1, 'UTF-8') . '</t>';
                     $this->translation_texts[$md5] = [
                         'class' => $record->ClassName,
                         'id' => $record->ID,
                         'field' => $part,
-                        'value' => "<t id=\"$md5\">{$fieldOrObject->getValue()}</t>"
+                        'isHtmlField' => $isHtmlField,
+                        'value' => $value,
                     ];
-                } else if ($recursive) {
+                } elseif ($recursive) {
                     if ($fieldOrObject instanceof DataObject && $fieldOrObject->isInDB()) {
                         $this->collectTexts($fieldOrObject, true);
                     } else {
@@ -117,47 +126,86 @@ class DataObjectTranslator implements PermissionProvider
     }
 
     /**
-     * @param string | string[] $text
-     * @param string $locale_from e.g. 'de_DE' or 'en_US'
-     * @param string $locale_to e.g. 'de_DE' or 'en_US'
-     * @return \DeepL\TextResult[]
+     * Translate all collected texts via DeepL.
+     * HTML fields use html tag handling; plain text fields use xml tag handling with <t> wrappers.
+     *
      * @throws \DeepL\DeepLException
      */
-    protected function deeplTranslate($text, $locale_from, $locale_to)
+    protected function deeplTranslate($locale_from, $locale_to)
     {
-        if (!$authKey = Environment::getEnv('DEEPL_API_KEY'))
+        if (!$authKey = Environment::getEnv('DEEPL_API_KEY')) {
             throw new \Exception('env DEEPL_API_KEY not set');
+        }
 
         $translator = new \DeepL\Translator($authKey);
 
-        //source language format is 'de', 'en', etc.
+        // Source language format is 'de', 'en', etc.
         $locale_from = explode('_', $locale_from)[0];
 
-        // some target languages need to be specific, see https://developers.deepl.com/docs/resources/supported-languages#target-languages
+        // Some target languages need to be specific, see https://developers.deepl.com/docs/resources/supported-languages#target-languages
         if (in_array($locale_to, ['en_GB', 'en_US', 'pt_PT', 'pt_BR'])) {
-            // DeepL uses en-US instead of en_US
             $locale_to = str_replace('_', '-', $locale_to);
-        } else if (in_array(explode('_', $locale_to)[0], ['en', 'pt'])) {
+        } elseif (in_array(explode('_', $locale_to)[0], ['en', 'pt'])) {
             // ToDo non-standard en,pt languages need fallback
         } else {
             $locale_to = explode('_', $locale_to)[0];
         }
 
-        $options = [
-            TranslateTextOptions::TAG_HANDLING => 'xml',
-            TranslateTextOptions::PRESERVE_FORMATTING => true
-        ];
+        // Split into HTML and plain text batches
+        $htmlKeys = [];
+        $htmlTexts = [];
+        $textKeys = [];
+        $textTexts = [];
 
-        $results = $translator->translateText($text, $locale_from, $locale_to, $options);
+        foreach ($this->translation_texts as $md5 => $data) {
+            if (empty($data['value'])) {
+                continue;
+            }
 
-        foreach ($results as $result) {
-            $pattern = '/<t id="(\w+)">(.*)<\/t>/s';
-            preg_match($pattern, $result->text, $matches);
-            $source = $this->translation_texts[$matches[1]];
-            $this->translation_results[$source['class']][$source['id']][$source['field']] = $matches[2];
+            if (!empty($data['isHtmlField'])) {
+                $htmlKeys[] = $md5;
+                $htmlTexts[] = $data['value'];
+            } else {
+                $textKeys[] = $md5;
+                $textTexts[] = $data['value'];
+            }
         }
 
-        return $results;
+        // Translate HTML fields — html tag handling preserves <br>, &nbsp;, and all HTML constructs
+        if (!empty($htmlTexts)) {
+            $htmlResults = $translator->translateText($htmlTexts, $locale_from, $locale_to, [
+                TranslateTextOptions::TAG_HANDLING => 'html',
+                TranslateTextOptions::PRESERVE_FORMATTING => true,
+            ]);
+            foreach ($htmlResults as $i => $result) {
+                $source = $this->translation_texts[$htmlKeys[$i]];
+                $this->translation_results[$source['class']][$source['id']][$source['field']] = $result->text;
+            }
+        }
+
+        // Translate plain text fields — xml tag handling with <t id="md5"> wrappers
+        if (!empty($textTexts)) {
+            $textResults = $translator->translateText($textTexts, $locale_from, $locale_to, [
+                TranslateTextOptions::TAG_HANDLING => 'xml',
+                TranslateTextOptions::PRESERVE_FORMATTING => true,
+            ]);
+            foreach ($textResults as $i => $result) {
+                $pattern = '/<t id="(\w+)">(.*)<\/t>/s';
+
+                if (!preg_match($pattern, $result->text, $matches)) {
+                    // Fallback: match by array position if regex fails
+                    $source = $this->translation_texts[$textKeys[$i]];
+                    $this->translation_results[$source['class']][$source['id']][$source['field']] = $result->text;
+
+                    continue;
+                }
+
+                $source = $this->translation_texts[$matches[1]];
+                // Decode XML entities back to plain characters
+                $translatedText = html_entity_decode($matches[2], ENT_XML1 | ENT_HTML5, 'UTF-8');
+                $this->translation_results[$source['class']][$source['id']][$source['field']] = $translatedText;
+            }
+        }
     }
 
     /**
@@ -187,8 +235,8 @@ class DataObjectTranslator implements PermissionProvider
                 //                'help' => _t(__CLASS__ . '.ACCESSALLINTERFACESHELP', 'Overrules more specific access settings.'),
                 //                'sort' => -100
                 'name' => 'Translate content with DeepL',
-                'category' => _t(__CLASS__ . '.PERMISSION', 'Localisation')
-            ]
+                'category' => _t(__CLASS__ . '.PERMISSION', 'Localisation'),
+            ],
         ];
     }
 
@@ -224,6 +272,7 @@ class DataObjectTranslator implements PermissionProvider
             foreach ($list as $obj) {
                 if (!$obj->existsInLocale($locale_to)) {
                     DB::alteration_message("WARNING: $class #$obj->ID '$obj->Title' does not exist in $locale_to");
+
                     continue;
                 }
 
@@ -242,8 +291,9 @@ class DataObjectTranslator implements PermissionProvider
 
             /** @var DataObject $obj */
             foreach ($list as $obj) {
-                if (!$obj->existsInLocale($locale))
+                if (!$obj->existsInLocale($locale)) {
                     continue;
+                }
 
                 $translator = DataObjectTranslator::create($obj);
                 $listCount++;

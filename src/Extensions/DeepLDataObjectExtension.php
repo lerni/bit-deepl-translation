@@ -98,13 +98,15 @@ class DeepLDataObjectExtension extends DataExtension
                 ]);
                 return $message;
 
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 $message = _t(__CLASS__ . '.Translated', '{object} #{id} {title} Übersetzung: {error}', [
                     'object' => $this->owner->singular_name(),
                     'id' => $this->owner->ID,
                     'title' => $this->owner->Title,
                     'error' => $e->getMessage()
                 ]);
+                \SilverStripe\Core\Injector\Injector::inst()->get(\Psr\Log\LoggerInterface::class)
+                    ->error('DeepL translation error: ' . $e->getMessage(), ['exception' => $e]);
                 return false;
             }
         }
